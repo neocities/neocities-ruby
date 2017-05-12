@@ -1,0 +1,4 @@
+#!/usr/bin/env ruby
+require_relative '../lib/neocities/cli'
+cli = Neocities::CLI.new ARGV
+cli.run
