@@ -6,7 +6,7 @@ require_relative 'client'
 
 module Neocities
   class CLI
-    SUBCOMMANDS = %w{upload delete ls}
+    SUBCOMMANDS = %w{upload delete ls info}
     HELP_SUBCOMMANDS = ['-h', '--help', 'help']
     PENELOPE_MOUTHS = %w{^ o ~ - v U}
     PENELOPE_EYES = %w{o ~ O}
@@ -36,6 +36,19 @@ module Neocities
         @sitename = @prompt.ask('sitename:', default: ENV['NEOCITIES_SITENAME'])
         @password = @prompt.mask('password:', default: ENV['NEOCITIES_PASSWORD'])
         @client = Neocities::Client.new sitename: @sitename, password: @password
+      end
+
+      if @subcmd == 'info'
+        resp = @client.info(@subargs[0] || @sitename)
+
+        out = []
+
+        resp[:info].each do |k,v|
+          out.push [@pastel.bold(k), v]
+        end
+
+        puts TTY::Table.new(out).to_s
+        exit
       end
 
       if @subcmd == 'ls'
@@ -92,7 +105,7 @@ module Neocities
             next
           end
 
-          puts @pastel.bold("Uploading #{path} ...")
+          puts @pastel.bold("Uploading #{path} to /#{Pathname(path).basename} ...")
           resp = @client.upload path
           display_response resp
         end
@@ -150,6 +163,8 @@ HERE
     upload          Upload files to your Neocities site.
     delete          Delete files from your Neocities site.
     ls #{@pastel.dim '[--detail]'}   List files from your Neocities site.
+    info            Information and stats for your site
+
 HERE
       exit
     end
