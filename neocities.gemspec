@@ -20,6 +20,14 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'tty-prompt',    '~> 0.12', '>= 0.12.0'
   spec.add_dependency 'pastel',        '~> 0.7', '>= 0.7.1'
   spec.add_dependency 'http',          '~> 2.2', '>= 2.2.2'
+  spec.add_dependency 'buff-ignore',   '~> 1.2'
 
-  spec.add_development_dependency      'rake', '~> 10.0'
+#  spec.add_development_dependency      'rake', '~> 10.0'
+#  spec.add_development_dependency      'faker'
+#  spec.add_development_dependency      'minitest'
+#  spec.add_development_dependency      'minitest-reporters'
+#  spec.add_development_dependency      'rack-test'
+#  spec.add_development_dependency      'mocha'
+#  spec.add_development_dependency      'webmock'
+#  spec.add_development_dependency      'simplecov'
 end

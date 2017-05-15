@@ -16,11 +16,15 @@ module Neocities
       end
     end
 
-    def list(path='/')
+    def list(path=nil)
       run :get, 'list', params: {path: path}
     end
 
-    def upload(path)
+    def key
+      run :get, 'key', {}
+    end
+
+    def upload(path, remote_path=nil)
       path = Pathname path
 
       unless path.exist?
@@ -28,7 +32,7 @@ module Neocities
       end
 
       run :post, 'upload', form: {
-        path.basename => HTTP::FormData::File.new(path.to_s)
+        (remote_path || path.basename) => HTTP::FormData::File.new(path.to_s)
       }
     end
 
