@@ -1,4 +1,4 @@
 #!/usr/bin/env ruby
-require_relative '../lib/neocities'
+require File.join(File.dirname(__FILE__), '..', 'lib', 'neocities')
 cli = Neocities::CLI.new ARGV
 cli.run

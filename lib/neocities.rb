@@ -1,3 +1,3 @@
-require_relative 'neocities/version'
-require_relative 'neocities/client'
-require_relative 'neocities/cli'
+require File.join(File.dirname(__FILE__), 'neocities', 'version')
+require File.join(File.dirname(__FILE__), 'neocities', 'client')
+require File.join(File.dirname(__FILE__), 'neocities', 'cli')

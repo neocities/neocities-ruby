@@ -4,11 +4,11 @@ require 'tty/table'
 require 'tty/prompt'
 require 'fileutils'
 require 'buff/ignore'
+require File.join(File.dirname(__FILE__), 'client')
 
 module Neocities
   class CLI
-    API_KEY_PATH = ENV['HOME']+'/.neocities/api_key'
-    SUBCOMMANDS = %w{upload delete list info sync pizza}
+    SUBCOMMANDS = %w{upload delete list info push logout pizza}
     HELP_SUBCOMMANDS = ['-h', '--help', 'help']
     PENELOPE_MOUTHS = %w{^ o ~ - v U}
     PENELOPE_EYES = %w{o ~ O}
@@ -20,6 +20,7 @@ module Neocities
       @subargs = @argv[1..@argv.length]
       @prompt = TTY::Prompt.new
       @api_key = ENV['NEOCITIES_API_KEY'] || nil
+      @app_config_path = File.join self.class.app_config_path, 'config'
     end
 
     def display_response(resp)
@@ -42,7 +43,7 @@ module Neocities
       send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
 
       begin
-        @api_key = File.read API_KEY_PATH
+        @api_key = File.read @app_config_path
       rescue Errno::ENOENT
         @api_key = nil
       end
@@ -59,9 +60,9 @@ module Neocities
 
         res = @client.key
         if res[:api_key]
-          FileUtils.mkdir_p Pathname(API_KEY_PATH).dirname
-          File.write API_KEY_PATH, res[:api_key]
-          puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold API_KEY_PATH}."
+          FileUtils.mkdir_p Pathname(@app_config_path).dirname
+          File.write @app_config_path, res[:api_key]
+          puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
         else
           display_response resp
           exit
@@ -79,6 +80,21 @@ module Neocities
         resp = @client.delete file
 
         display_response resp
+      end
+    end
+
+    def logout
+      confirmed = false
+      loop {
+        case @subargs[0]
+        when '-y' then @subargs.shift; confirmed = true
+        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_logout_help_and_exit
+        else break
+        end
+      }
+      if confirmed
+        FileUtils.rm @app_config_path
+        puts @pastel.bold("Your api key has been removed.")
       end
     end
 
@@ -137,14 +153,14 @@ module Neocities
       end
     end
 
-    def sync
+    def push
       @no_gitignore = false
       @excluded_files = []
       loop {
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
-        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_sync_help_and_exit
+        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
       }
@@ -153,12 +169,12 @@ module Neocities
 
       if !root_path.exist?
         display_response result: 'error', message: "path #{root_path} does not exist"
-        display_sync_help_and_exit
+        display_push_help_and_exit
       end
 
       if !root_path.directory?
         display_response result: 'error', message: 'provided path is not a directory'
-        display_sync_help_and_exit
+        display_push_help_and_exit
       end
 
       Dir.chdir(root_path) do
@@ -166,10 +182,20 @@ module Neocities
 
         if @no_gitignore == false
           begin
-            ignore = Buff::Ignore::IgnoreFile.new '.gitignore'
-            ignore.apply! paths
-            puts "Not syncing .gitignore entries (--no-gitignore to disable)"
-          rescue Buff::Ignore::IgnoreFileNotFound
+            ignores = File.readlines('.gitignore').collect! do |ignore|
+              File.directory?(ignore.strip!) ? "#{ignore}**" : ignore
+            end
+            paths.select! do |path|
+              res = true
+              ignores.each do |ignore|
+                if File.fnmatch?(ignore.strip, path)
+                  res = false
+                  break
+                end
+              end
+            end
+            puts "Not pushing .gitignore entries (--no-gitignore to disable)"
+          rescue Errno::ENOENT
           end
         end
 
@@ -179,7 +205,7 @@ module Neocities
 
         paths.each do |path|
           next if path.directory?
-          print @pastel.bold("Syncing #{path} ... ")
+          print @pastel.bold("Uploading #{path} ... ")
           resp = @client.upload path, path
 
           if resp[:result] == 'success'
@@ -213,7 +239,7 @@ module Neocities
         end
 
         if path.directory?
-          puts "#{path} is a directory, skipping (see the sync command)"
+          puts "#{path} is a directory, skipping (see the push command)"
           next
         end
 
@@ -256,9 +282,11 @@ HERE
 
   #{@pastel.dim 'Examples:'}
 
-  #{@pastel.green '$ neocities delete myfile.jpg'}                 Delete myfile.jpg
+  #{@pastel.green '$ neocities delete myfile.jpg'}               Delete myfile.jpg
 
-  #{@pastel.green '$ neocities delete myfile.jpg myfile2.jpg'}     Delete myfile.jpg and myfile2.jpg
+  #{@pastel.green '$ neocities delete myfile.jpg myfile2.jpg'}   Delete myfile.jpg and myfile2.jpg
+
+  #{@pastel.green '$ neocities delete mydir'}                    Deletes mydir and everything inside it (be careful!)
 
 HERE
       exit
@@ -280,19 +308,19 @@ HERE
       exit
     end
 
-    def display_sync_help_and_exit
+    def display_push_help_and_exit
       display_banner
 
       puts <<HERE
-  #{@pastel.green.bold 'sync'} - Upload a local directory to your Neocities site
+  #{@pastel.green.bold 'push'} - Recursively upload a local directory to your Neocities site
 
   #{@pastel.dim 'Examples:'}
 
-  #{@pastel.green '$ neocities sync .'}                                 Recursively upload current directory
+  #{@pastel.green '$ neocities push .'}                                 Recursively upload current directory.
 
-  #{@pastel.green '$ neocities sync -e node_modules -e secret.txt .'}   Exclude certain files from sync
+  #{@pastel.green '$ neocities push -e node_modules -e secret.txt .'}   Exclude certain files from push
 
-  #{@pastel.green '$ neocities sync --no-gitignore .'}                  Don't use .gitignore to exclude files
+  #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
 
 HERE
       exit
@@ -312,6 +340,20 @@ HERE
       exit
     end
 
+    def display_logout_help_and_exit
+      display_banner
+
+      puts <<HERE
+  #{@pastel.green.bold 'logout'} - Remove the site api key from the config
+
+  #{@pastel.dim 'Examples:'}
+
+  #{@pastel.green '$ neocities logout -y'}
+
+HERE
+      exit
+    end
+
     def display_banner
       puts <<HERE
 
@@ -326,16 +368,44 @@ HERE
       display_banner
       puts <<HERE
   #{@pastel.dim 'Subcommands:'}
-    sync        Recursively upload a local directory to your site
+    push        Recursively upload a local directory to your site
     upload      Upload individual files to your Neocities site
     delete      Delete files from your Neocities site
     list        List files from your Neocities site
     info        Information and stats for your site
+    logout      Remove the site api key from the config
     version     Unceremoniously display version and self destruct
     pizza       Order a free pizza
 
 HERE
       exit
+    end
+
+    def self.app_config_path
+      File.join root_config_path, 'neocities'
+    end
+
+    def self.root_config_path
+      platform = if RUBY_PLATFORM =~ /win32/
+        :win32
+      elsif RUBY_PLATFORM =~ /darwin/
+        :darwin
+      elsif RUBY_PLATFORM =~ /linux/
+        :linux
+      else
+        :unknown
+      end
+
+      case platform
+      when :win32
+        return File.join(ENV['LOCALAPPDATA']) if ENV['LOCALAPPDATA']
+        File.join ENV['USERPROFILE'], 'Local Settings', 'Application Data'
+      when :darwin
+        File.join ENV['HOME'], 'Library', 'Application Support'
+      else
+        return File.join(ENV['XDG_CONFIG_HOME']) if ENV['XDG_CONFIG_HOME']
+        File.join ENV['HOME'], '.config'
+      end
     end
   end
 end
