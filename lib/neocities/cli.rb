@@ -3,7 +3,6 @@ require 'pastel'
 require 'tty/table'
 require 'tty/prompt'
 require 'fileutils'
-require 'buff/ignore'
 require File.join(File.dirname(__FILE__), 'client')
 
 module Neocities
