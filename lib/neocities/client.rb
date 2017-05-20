@@ -1,3 +1,8 @@
+begin
+  require 'openssl/win/root' if Gem.win_platform?
+rescue
+end
+
 require 'net/http'
 require 'net/https'
 require 'json'

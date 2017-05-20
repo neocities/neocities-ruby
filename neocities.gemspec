@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
   spec.executables   = ['neocities']
   spec.test_files    = spec.files.grep(%r{^(tests)/})
   spec.require_paths = ["lib"]
+  spec.extensions    = ['ext/mkrf_conf.rb']
 
   spec.add_dependency 'tty-table',      '~> 0.8', '>= 0.8.0'
   spec.add_dependency 'tty-prompt',     '~> 0.12', '>= 0.12.0'
