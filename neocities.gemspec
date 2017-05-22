@@ -17,8 +17,8 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.extensions    = ['ext/mkrf_conf.rb']
 
-  spec.add_dependency 'tty-table',      '~> 0.8', '>= 0.8.0'
-  spec.add_dependency 'tty-prompt',     '~> 0.12', '>= 0.12.0'
-  spec.add_dependency 'pastel',         '~> 0.7', '>= 0.7.1'
-  spec.add_dependency 'multipart-post', '~> 2.0', '>= 2.0.0'
+  spec.add_dependency 'tty-table',           '~> 0.8',  '>= 0.8.0'
+  spec.add_dependency 'tty-prompt',          '~> 0.12', '>= 0.12.0'
+  spec.add_dependency 'pastel',              '~> 0.7',  '>= 0.7.1'
+  spec.add_dependency 'httpclient',          '~> 2.8',  '>= 2.8.3'
 end
