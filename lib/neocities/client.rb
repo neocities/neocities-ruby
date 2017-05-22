@@ -8,6 +8,7 @@ require 'net/https'
 require 'json'
 require 'pathname'
 require 'uri'
+require 'digest'
 require 'net/http/post/multipart'
 
 module Neocities
@@ -33,6 +34,10 @@ module Neocities
       get 'key'
     end
 
+    def upload_hash(remote_path, sha1_hash)
+      post 'upload_hash', remote_path => sha1_hash
+    end
+
     def upload(path, remote_path=nil)
       path = Pathname path
 
@@ -40,7 +45,15 @@ module Neocities
         raise ArgumentError, "#{path.to_s} does not exist."
       end
 
-      post 'upload', (remote_path || path.basename) => UploadIO.new(path.to_s, 'application/octet-stream')
+      rpath = (remote_path || path.basename)
+
+      res = upload_hash rpath, Digest::SHA1.file(path.to_s).hexdigest
+
+      if res[:files] && res[:files][remote_path.to_s.to_sym] == true
+        return {result: 'error', error_type: 'file_exists', message: 'file already exists and matches local file, not uploading'}
+      else
+        post 'upload', rpath => UploadIO.new(path.to_s, 'application/octet-stream')
+      end
     end
 
     def delete(*paths)

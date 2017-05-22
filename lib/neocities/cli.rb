@@ -25,6 +25,10 @@ module Neocities
     def display_response(resp)
       if resp[:result] == 'success'
         puts "#{@pastel.green.bold 'SUCCESS:'} #{resp[:message]}"
+      elsif resp[:result] == 'error' && resp[:error_type] == 'file_exists'
+        out = "#{@pastel.yellow.bold 'EXISTS:'} #{resp[:message]}"
+        out += " (#{resp[:error_type]})" if resp[:error_type]
+        puts out
       else
         out = "#{@pastel.red.bold 'ERROR:'} #{resp[:message]}"
         out += " (#{resp[:error_type]})" if resp[:error_type]
@@ -207,7 +211,9 @@ module Neocities
           print @pastel.bold("Uploading #{path} ... ")
           resp = @client.upload path, path
 
-          if resp[:result] == 'success'
+          if resp[:result] == 'error' && resp[:error_type] == 'file_exists'
+            print @pastel.yellow.bold("EXISTS") + "\n"
+          elsif resp[:result] == 'success'
             print @pastel.green.bold("SUCCESS") + "\n"
           else
             print "\n"
