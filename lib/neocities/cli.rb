@@ -19,7 +19,7 @@ module Neocities
       @subargs = @argv[1..@argv.length]
       @prompt = TTY::Prompt.new
       @api_key = ENV['NEOCITIES_API_KEY'] || nil
-      @app_config_path = File.join self.class.app_config_path, 'config'
+      @app_config_path = File.join self.class.app_config_path('neocities'), 'config'
     end
 
     def display_response(resp)
@@ -386,11 +386,7 @@ HERE
       exit
     end
 
-    def self.app_config_path
-      File.join root_config_path, 'neocities'
-    end
-
-    def self.root_config_path
+    def self.app_config_path(name)
       platform = if RUBY_PLATFORM =~ /win32/
         :win32
       elsif RUBY_PLATFORM =~ /darwin/
@@ -402,14 +398,30 @@ HERE
       end
 
       case platform
-      when :win32
-        return File.join(ENV['LOCALAPPDATA']) if ENV['LOCALAPPDATA']
-        File.join ENV['USERPROFILE'], 'Local Settings', 'Application Data'
+      when :linux
+        if ENV['XDG_CONFIG_HOME']
+          return File.join(ENV['XDG_CONFIG_HOME'], name)
+        end
+
+        if ENV['HOME']
+          return File.join(ENV['HOME'], '.config', name)
+        end
       when :darwin
-        File.join ENV['HOME'], 'Library', 'Application Support'
+        return File.join(ENV['HOME'], 'Library', 'Application Support', name)
       else
-        return File.join(ENV['XDG_CONFIG_HOME']) if ENV['XDG_CONFIG_HOME']
-        File.join ENV['HOME'], '.config'
+        # Windows platform detection is weird, just look for the env variables
+        if ENV['LOCALAPPDATA']
+          return File.join(ENV['LOCALAPPDATA'], name)
+        end
+
+        if ENV['USERPROFILE']
+          return File.join(ENV['USERPROFILE'], 'Local Settings', 'Application Data', name)
+        end
+
+        # Should work for the BSDs
+        if ENV['HOME']
+          return File.join(ENV['HOME'], '.'+name)
+        end
       end
     end
   end
