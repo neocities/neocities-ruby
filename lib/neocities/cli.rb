@@ -61,10 +61,10 @@ module Neocities
 
         @client = Neocities::Client.new sitename: @sitename, password: @password
 
-        res = @client.key
-        if res[:api_key]
+        resp = @client.key
+        if resp[:api_key]
           FileUtils.mkdir_p Pathname(@app_config_path).dirname
-          File.write @app_config_path, res[:api_key]
+          File.write @app_config_path, resp[:api_key]
           puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
         else
           display_response resp
