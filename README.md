@@ -6,25 +6,21 @@ A CLI and library for using the Neocities API. Makes it easy to quickly upload, 
 
 ### Mac OSX
 
-If you're using OSX (or already have ruby installed), run this command:
+If you're using OSX (or already have ruby installed):
 
     gem install neocities
 
-### Ubuntu/Debian 
+### Ubuntu/Debian
 
-If you're using a Debian based system, run this command:
+    sudo apt-get install ruby
 
-    sudo apt install ruby-full ruby-dev
-    
-Note that your distribution may have different names for the Ruby packages, such as ruby-devel on RedHat.
+### Windows
 
-After install Ruby, run this command:
+Install ruby with [RubyInstaller](https://rubyinstaller.org/). Then you can install the gem with the above command.
 
-    sudo gem install neocities
-  
 ### Running
 
-After that, you are all set! Run `neocities` to see the options and get started inside the CLI. 
+After that, you are all set! Run `neocities` in a command line to see the options and get started.
 
 ## Neocities::Client
 
