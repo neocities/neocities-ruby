@@ -45,11 +45,13 @@ module Neocities
       display_help_and_exit if @subcmd.nil? || @argv.include?(HELP_SUBCOMMANDS) || !SUBCOMMANDS.include?(@subcmd)
       send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
 
-      begin
-        @api_key = File.read @app_config_path
-      rescue Errno::ENOENT
-        @api_key = nil
-      end
+      if !@api_key
+        begin
+          @api_key = File.read @app_config_path
+        rescue Errno::ENOENT
+          @api_key = nil
+        end
+      end 
 
       if @api_key.nil?
         puts "Please login to get your API key:"
