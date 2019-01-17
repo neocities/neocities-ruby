@@ -114,7 +114,7 @@ module Neocities
       out = []
 
       resp[:info].each do |k,v|
-        v = Time.parse(v).localtime if k == :created_at || k == :last_updated
+        v = Time.parse(v).localtime if v && (k == :created_at || k == :last_updated)
         out.push [@pastel.bold(k), v]
       end
 
