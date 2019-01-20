@@ -207,7 +207,7 @@ module Neocities
         paths.select! {|p| !@excluded_files.include?(p)}
 
         paths.select! {|p|
-          !excluded_files.include?(Pathname.new(p).dirname.to_s)
+          !@excluded_files.include?(Pathname.new(p).dirname.to_s)
         }
 
         paths.collect! {|path| Pathname path}
