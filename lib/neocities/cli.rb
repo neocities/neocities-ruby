@@ -161,14 +161,20 @@ module Neocities
     def push
       @no_gitignore = false
       @excluded_files = []
+      @dry_run = false
       loop {
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
+        when '--dry-run' then @subargs.shift; @dry_run = true
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
       }
+
+      if @dry_run
+        puts @pastel.green.bold("Doing a dry run, not actually pushing anything")
+      end
 
       root_path = Pathname @subargs[0]
 
@@ -215,7 +221,7 @@ module Neocities
         paths.each do |path|
           next if path.directory?
           print @pastel.bold("Uploading #{path} ... ")
-          resp = @client.upload path, path
+          resp = @client.upload path, path, @dry_run
 
           if resp[:result] == 'error' && resp[:error_type] == 'file_exists'
             print @pastel.yellow.bold("EXISTS") + "\n"
@@ -332,6 +338,8 @@ HERE
   #{@pastel.green '$ neocities push -e node_modules -e secret.txt .'}   Exclude certain files from push
 
   #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
+
+  #{@pastel.green '$ neocities push --dry-run .'}                       Just show what would be uploaded
 
 HERE
       exit
