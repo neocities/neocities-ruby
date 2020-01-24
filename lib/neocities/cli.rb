@@ -188,7 +188,8 @@ module Neocities
         if @no_gitignore == false
           begin
             ignores = File.readlines('.gitignore').collect! do |ignore|
-              File.directory?(ignore.strip!) ? "#{ignore}**" : ignore
+              ignore.strip!
+              File.directory?(ignore) ? "#{ignore}**" : ignore
             end
             paths.select! do |path|
               res = true
