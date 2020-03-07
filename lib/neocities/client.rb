@@ -42,7 +42,7 @@ module Neocities
       post 'upload_hash', remote_path => sha1_hash
     end
 
-    def upload(path, remote_path=nil)
+    def upload(path, remote_path=nil, dry_run=false)
       path = Pathname path
 
       unless path.exist?
@@ -56,8 +56,12 @@ module Neocities
       if res[:files] && res[:files][remote_path.to_s.to_sym] == true
         return {result: 'error', error_type: 'file_exists', message: 'file already exists and matches local file, not uploading'}
       else
-        File.open(path.to_s) do |file|
-          post 'upload', rpath => file
+        if dry_run
+          return {result: 'success'}
+        else
+          File.open(path.to_s) do |file|
+            post 'upload', rpath => file
+          end
         end
       end
     end
