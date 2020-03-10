@@ -162,11 +162,13 @@ module Neocities
       @no_gitignore = false
       @excluded_files = []
       @dry_run = false
+      @prune = false
       loop {
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
         when '--dry-run' then @subargs.shift; @dry_run = true
+        when '--prune' then @subargs.shift; @prune = true
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
@@ -186,6 +188,23 @@ module Neocities
       if !root_path.directory?
         display_response result: 'error', message: 'provided path is not a directory'
         display_push_help_and_exit
+      end
+
+      if @prune
+        pruned_dirs = []
+        resp = @client.list
+        resp[:files].each do |file|
+          path = Pathname(File.join(@subargs[0], file[:path]))
+
+          pruned_dirs << path if !path.exist? && (file[:is_directory])
+
+          if !path.exist? && !pruned_dirs.include?(path.dirname)
+            puts @pastel.bold("Deleting #{file[:path]} ...")
+            resp = @client.delete file[:path]
+
+            display_response resp
+          end
+        end
       end
 
       Dir.chdir(root_path) do
