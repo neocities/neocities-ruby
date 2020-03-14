@@ -66,6 +66,14 @@ module Neocities
       end
     end
 
+    def delete_wrapper_with_dry_run(paths, dry_run=false)
+      if dry_run
+        return {result: 'success'}
+      else
+        delete(paths)
+      end
+    end
+
     def delete(*paths)
       post 'delete', 'filenames[]' => paths
     end
