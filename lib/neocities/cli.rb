@@ -199,10 +199,15 @@ module Neocities
           pruned_dirs << path if !path.exist? && (file[:is_directory])
 
           if !path.exist? && !pruned_dirs.include?(path.dirname)
-            puts @pastel.bold("Deleting #{file[:path]} ...")
-            resp = @client.delete file[:path]
+            print @pastel.bold("Deleting #{file[:path]} ... ")
+            resp = @client.delete_wrapper_with_dry_run file[:path], @dry_run
 
-            display_response resp
+            if resp[:result] == 'success'
+              print @pastel.green.bold("SUCCESS") + "\n"
+            else
+              print "\n"
+              display_response resp
+            end
           end
         end
       end
