@@ -1,5 +1,6 @@
 require 'rubygems'
-require 'rubygems/dependency_installer.rb'
+require 'rubygems/command'
+require 'rubygems/dependency_installer'
 begin
   Gem::Command.build_args = ARGV
   rescue NoMethodError
