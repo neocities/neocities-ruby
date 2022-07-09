@@ -160,12 +160,14 @@ module Neocities
 
     def push
       @no_gitignore = false
+      @include_hidden = true
       @excluded_files = []
       @dry_run = false
       @prune = false
       loop {
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
+        when '--include-hidden' then @subargs.shift; @include_hidden = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
         when '--dry-run' then @subargs.shift; @dry_run = true
         when '--prune' then @subargs.shift; @prune = true
@@ -213,7 +215,12 @@ module Neocities
       end
 
       Dir.chdir(root_path) do
-        paths = Dir.glob(File.join('**', '*'))
+
+        if @include_hidden == true
+          paths = Dir.glob(File.join('**', '*'), File::FNM_DOTMATCH)
+        else
+          paths = Dir.glob(File.join('**', '*'))
+        end
 
         if @no_gitignore == false
           begin
@@ -363,6 +370,7 @@ HERE
   #{@pastel.green '$ neocities push -e node_modules -e secret.txt .'}   Exclude certain files from push
 
   #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
+  #{@pastel.green '$ neocities push --include-hidden .'}                Include hidden files and directories
 
   #{@pastel.green '$ neocities push --dry-run .'}                       Just show what would be uploaded
 
