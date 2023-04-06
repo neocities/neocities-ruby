@@ -48,6 +48,8 @@ module Neocities
       if !@api_key
         begin
           @api_key = File.read @app_config_path
+          # Remove any trailing whitespace causing HTTP requests to fail
+          @api_key = @api_key.strip
         rescue Errno::ENOENT
           @api_key = nil
         end
