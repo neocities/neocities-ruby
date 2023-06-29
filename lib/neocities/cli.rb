@@ -367,6 +367,8 @@ HERE
   #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
 
   #{@pastel.green '$ neocities push --dry-run .'}                       Just show what would be uploaded
+      
+  #{@pastel.green '$ neocities push --prune .'}                         Delete site files not in dir (be careful!)
 
 HERE
       exit
