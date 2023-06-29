@@ -215,7 +215,7 @@ module Neocities
       end
 
       Dir.chdir(root_path) do
-        paths = Dir.glob(File.join('**', '*'))
+        paths = Dir.glob(File.join('**', '*'), File::FNM_DOTMATCH)
 
         if @no_gitignore == false
           begin
