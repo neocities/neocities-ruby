@@ -42,8 +42,9 @@ module Neocities
         exit
       end
 
-      display_help_and_exit if @subcmd.nil? || @argv.include?(HELP_SUBCOMMANDS) || !SUBCOMMANDS.include?(@subcmd)
-      send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
+      send "display_#{@subargs[0]}_help_and_exit" if HELP_SUBCOMMANDS.include?(@subcmd) && SUBCOMMANDS.include?(@subargs[0])
+      display_help_and_exit if @subcmd.nil? || !SUBCOMMANDS.include?(@subcmd)
+      send "display_#{@subcmd}_help_and_exit" if @subargs.join("").match(HELP_SUBCOMMANDS.join('|')) && @subcmd != "info"
 
       if !@api_key
         begin
@@ -53,7 +54,7 @@ module Neocities
         rescue Errno::ENOENT
           @api_key = nil
         end
-      end 
+      end
 
       if @api_key.nil?
         puts "Please login to get your API key:"
@@ -82,6 +83,7 @@ module Neocities
     end
 
     def delete
+      display_delete_help_and_exit if @subargs.empty?
       @subargs.each do |file|
         puts @pastel.bold("Deleting #{file} ...")
         resp = @client.delete file
@@ -95,13 +97,15 @@ module Neocities
       loop {
         case @subargs[0]
         when '-y' then @subargs.shift; confirmed = true
-        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_logout_help_and_exit
+        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); break
         else break
         end
       }
       if confirmed
         FileUtils.rm @app_config_path
         puts @pastel.bold("Your api key has been removed.")
+      else
+        display_logout_help_and_exit
       end
     end
 
@@ -125,6 +129,7 @@ module Neocities
     end
 
     def list
+      display_list_help_and_exit if @subargs.empty?
       if @subargs.delete('-d') == '-d'
         @detail = true
       end
@@ -161,6 +166,7 @@ module Neocities
     end
 
     def push
+      display_push_help_and_exit if @subargs.empty?
       @no_gitignore = false
       @excluded_files = []
       @dry_run = false
@@ -295,6 +301,10 @@ module Neocities
       end
     end
 
+    def pizza
+      display_pizza_help_and_exit
+    end
+
     def display_pizza_help_and_exit
       puts "Sorry, we're fresh out of dough today. Try again tomorrow."
       exit
@@ -367,7 +377,7 @@ HERE
   #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
 
   #{@pastel.green '$ neocities push --dry-run .'}                       Just show what would be uploaded
-      
+
   #{@pastel.green '$ neocities push --prune .'}                         Delete site files not in dir (be careful!)
 
 HERE
