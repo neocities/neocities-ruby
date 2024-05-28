@@ -52,16 +52,22 @@ module Neocities
         domain = "https://#{sitename}.neocities.org/"
       end
 
+      # start stats
       success_loaded = 0
       start_time = Time.now
       curr_dir = Dir.pwd
 
+      # get list of files
       resp = get 'list'
 
+      if resp[:result] == 'error'
+        raise ArgumentError, resp[:message]
+      end
+      
+      # fetch each file
       resp[:files].each do |file|
         if !file[:is_directory]
           print @pastel.bold("Loading #{file[:path]} ... ") if !quiet
-
           
           if 
             last_pull_time && \
@@ -76,8 +82,6 @@ module Neocities
           
           pathtotry = domain + file[:path]
           fileconts = @http.get pathtotry
-
-          
           
           # follow redirects
           while fileconts.status == 301

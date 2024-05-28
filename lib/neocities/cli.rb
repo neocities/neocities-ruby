@@ -314,7 +314,16 @@ module Neocities
 
     def pull
       begin
-        quiet = !(['--log', '-l'].include? @subargs[0])
+        # default options
+        quiet = true
+
+        loop {
+          case @subargs[0]
+          when '--logs', '-l' then @subargs.shift; quiet = false
+          when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_pull_help_and_exit
+          else break
+          end
+        }
 
         file = File.read @app_config_path
         data = JSON.load file
@@ -323,6 +332,7 @@ module Neocities
         last_pull_loc = data["LAST_PULL"] ? data["LAST_PULL"]["loc"] : nil
 
         Whirly.start spinner: ["😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"], status: "Retrieving files for #{@pastel.bold @sitename}" if quiet
+
         resp = @client.pull @sitename, last_pull_time, last_pull_loc, quiet
 
         # write last pull data to file (not necessarily the best way to do this, but better than cloning every time)
@@ -402,7 +412,13 @@ HERE
       display_banner
 
       puts <<HERE
-  #{@pastel.magenta.bold 'UNDER PRESSURe'}
+  #{@pastel.green.bold 'pull'} - Get the most recent version of files from your site
+
+  #{@pastel.dim 'Examples:'}
+
+  #{@pastel.green '$ neocities pull'}        Download/update files in the current folder
+
+  #{@pastel.green '$ neocities pull --logs'} Download/update files in the current folder, displaying information about each download
 
 HERE
       exit
