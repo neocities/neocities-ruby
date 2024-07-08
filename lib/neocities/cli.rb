@@ -3,11 +3,14 @@ require 'pastel'
 require 'tty/table'
 require 'tty/prompt'
 require 'fileutils'
+require 'json' # for reading configs
+require 'whirly' # for loader spinner
+
 require File.join(File.dirname(__FILE__), 'client')
 
 module Neocities
   class CLI
-    SUBCOMMANDS = %w{upload delete list info push logout pizza}
+    SUBCOMMANDS = %w{upload delete list info push logout pizza pull}
     HELP_SUBCOMMANDS = ['-h', '--help', 'help']
     PENELOPE_MOUTHS = %w{^ o ~ - v U}
     PENELOPE_EYES = %w{o ~ O}
@@ -19,7 +22,7 @@ module Neocities
       @subargs = @argv[1..@argv.length]
       @prompt = TTY::Prompt.new
       @api_key = ENV['NEOCITIES_API_KEY'] || nil
-      @app_config_path = File.join self.class.app_config_path('neocities'), 'config'
+      @app_config_path = File.join self.class.app_config_path('neocities'), 'config.json' # added json extension
     end
 
     def display_response(resp)
@@ -43,13 +46,21 @@ module Neocities
       end
 
       display_help_and_exit if @subcmd.nil? || @argv.include?(HELP_SUBCOMMANDS) || !SUBCOMMANDS.include?(@subcmd)
-      send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
+
+      if @subcmd != "pull"
+        send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
+      end
 
       if !@api_key
         begin
-          @api_key = File.read @app_config_path
-          # Remove any trailing whitespace causing HTTP requests to fail
-          @api_key = @api_key.strip
+          file = File.read @app_config_path
+          data = JSON.load file
+          
+          if data
+            @api_key = data["API_KEY"].strip # Remove any trailing whitespace causing HTTP requests to fail
+            @sitename = data["SITENAME"] # Store the sitename to be able to reference it later
+            @last_pull = data["LAST_PULL"] # Store the last time a pull was performed so that we only fetch from updated files
+          end
         rescue Errno::ENOENT
           @api_key = nil
         end
@@ -67,8 +78,14 @@ module Neocities
 
         resp = @client.key
         if resp[:api_key]
+          conf = {
+            "API_KEY": resp[:api_key],
+            "SITENAME": @sitename,
+          }
+
           FileUtils.mkdir_p Pathname(@app_config_path).dirname
-          File.write @app_config_path, resp[:api_key]
+          File.write @app_config_path, conf.to_json
+
           puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
         else
           display_response resp
@@ -295,6 +312,45 @@ module Neocities
       end
     end
 
+    def pull
+      begin
+        # default options
+        quiet = true
+
+        loop {
+          case @subargs[0]
+          when '--logs', '-l' then @subargs.shift; quiet = false
+          when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_pull_help_and_exit
+          else break
+          end
+        }
+
+        file = File.read @app_config_path
+        data = JSON.load file
+
+        last_pull_time = data["LAST_PULL"] ? data["LAST_PULL"]["time"] : nil
+        last_pull_loc = data["LAST_PULL"] ? data["LAST_PULL"]["loc"] : nil
+
+        Whirly.start spinner: ["😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"], status: "Retrieving files for #{@pastel.bold @sitename}" if quiet
+
+        resp = @client.pull @sitename, last_pull_time, last_pull_loc, quiet
+
+        # write last pull data to file (not necessarily the best way to do this, but better than cloning every time)
+        data["LAST_PULL"] = {
+          "time": Time.now,
+          "loc": Dir.pwd
+        }
+
+        File.write @app_config_path, data.to_json
+      rescue StandardError => ex
+        Whirly.stop if quiet
+        puts @pastel.red.bold "\nA fatal error occurred :-("
+        puts @pastel.red ex
+      ensure
+        exit
+      end
+    end
+
     def display_pizza_help_and_exit
       puts "Sorry, we're fresh out of dough today. Try again tomorrow."
       exit
@@ -351,6 +407,23 @@ HERE
 HERE
       exit
     end
+
+    def display_pull_help_and_exit
+      display_banner
+
+      puts <<HERE
+  #{@pastel.green.bold 'pull'} - Get the most recent version of files from your site
+
+  #{@pastel.dim 'Examples:'}
+
+  #{@pastel.green '$ neocities pull'}        Download/update files in the current folder
+
+  #{@pastel.green '$ neocities pull --logs'} Download/update files in the current folder, displaying information about each download
+
+HERE
+      exit
+    end
+
 
     def display_push_help_and_exit
       display_banner
@@ -423,6 +496,7 @@ HERE
     info        Information and stats for your site
     logout      Remove the site api key from the config
     version     Unceremoniously display version and self destruct
+    pull        Get the most recent version of files from your site
     pizza       Order a free pizza
 
 HERE

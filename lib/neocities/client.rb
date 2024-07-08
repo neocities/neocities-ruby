@@ -8,6 +8,10 @@ require 'pathname'
 require 'uri'
 require 'digest'
 require 'httpclient'
+require 'pastel'
+require 'date'
+
+require 'whirly'
 
 module Neocities
   class Client
@@ -17,6 +21,7 @@ module Neocities
       @uri = URI.parse API_URI
       @http = HTTPClient.new force_basic_auth: true
       @opts = opts
+      @pastel = Pastel.new eachline: "\n"
 
       unless opts[:api_key] || (opts[:sitename] && opts[:password])
         raise ArgumentError, 'client requires a login (sitename/password) or an api_key'
@@ -27,11 +32,89 @@ module Neocities
       else
         @http.set_auth API_URI, opts[:sitename], opts[:password]
       end
-
     end
 
     def list(path=nil)
       get 'list', :path => path
+    end
+
+    def pull(sitename, last_pull_time=nil, last_pull_loc=nil, quiet=true)
+      site_info = get 'info', sitename: sitename
+
+      if site_info[:result] == 'error'
+        raise ArgumentError, site_info[:message]
+      end
+
+      # handle custom domains for supporter accounts
+      if site_info[:info][:domain] && site_info[:info][:domain] != ""
+        domain = "https://#{site_info[:info][:domain]}/"
+      else
+        domain = "https://#{sitename}.neocities.org/"
+      end
+
+      # start stats
+      success_loaded = 0
+      start_time = Time.now
+      curr_dir = Dir.pwd
+
+      # get list of files
+      resp = get 'list'
+
+      if resp[:result] == 'error'
+        raise ArgumentError, resp[:message]
+      end
+      
+      # fetch each file
+      resp[:files].each do |file|
+        if !file[:is_directory]
+          print @pastel.bold("Loading #{file[:path]} ... ") if !quiet
+          
+          if 
+            last_pull_time && \
+            last_pull_loc && \
+            Time.parse(file[:updated_at]) <= Time.parse(last_pull_time) && \
+            last_pull_loc == curr_dir && \
+            File.exist?(file[:path]) # case when user deletes file
+            # case when file hasn't been updated since last 
+            print "#{@pastel.yellow.bold "NO NEW UPDATES"}\n" if !quiet
+            next
+          end
+          
+          pathtotry = domain + file[:path]
+          fileconts = @http.get pathtotry
+          
+          # follow redirects
+          while fileconts.status == 301
+            new_path = fileconts.header['location'][0]
+            print "\n#{@pastel.red "Fetch from #{pathtotry} failed."}\nTrying #{new_path} instead..." if !quiet
+
+            pathtotry = new_path
+            fileconts = @http.get pathtotry
+          end
+
+          if fileconts.ok?
+            print "#{@pastel.green.bold 'SUCCESS'}\n" if !quiet
+            success_loaded += 1
+
+            File.open("#{file[:path]}", "w") do |f|
+              f.write(fileconts.body)
+            end
+          else
+            print "#{@pastel.red.bold 'FAIL'}\n" if !quiet
+          end
+        else
+          FileUtils.mkdir_p "#{file[:path]}"
+        end
+      end
+
+      # calculate time command took
+      total_time = Time.now - start_time
+
+      # stop the spinner, if there is one
+      Whirly.stop if quiet
+
+      # display stats
+      puts @pastel.green "\nSuccessfully fetched #{success_loaded} files in #{total_time} seconds"
     end
 
     def key
@@ -86,6 +169,7 @@ module Neocities
       uri = @uri+path
       uri.query = URI.encode_www_form params
       resp = @http.get uri
+      
       JSON.parse resp.body, symbolize_names: true
     end
 
