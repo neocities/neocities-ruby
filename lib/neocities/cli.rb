@@ -3,11 +3,14 @@ require 'pastel'
 require 'tty/table'
 require 'tty/prompt'
 require 'fileutils'
+require 'json' # for reading configs
+require 'whirly' # for loader spinner
+
 require File.join(File.dirname(__FILE__), 'client')
 
 module Neocities
   class CLI
-    SUBCOMMANDS = %w{upload delete list info push logout pizza}
+    SUBCOMMANDS = %w{upload delete list info push logout pizza pull}
     HELP_SUBCOMMANDS = ['-h', '--help', 'help']
     PENELOPE_MOUTHS = %w{^ o ~ - v U}
     PENELOPE_EYES = %w{o ~ O}
@@ -19,7 +22,7 @@ module Neocities
       @subargs = @argv[1..@argv.length]
       @prompt = TTY::Prompt.new
       @api_key = ENV['NEOCITIES_API_KEY'] || nil
-      @app_config_path = File.join self.class.app_config_path('neocities'), 'config'
+      @app_config_path = File.join self.class.app_config_path('neocities'), 'config.json' # added json extension
     end
 
     def display_response(resp)
@@ -42,15 +45,24 @@ module Neocities
         exit
       end
 
-      send "display_#{@subargs[0]}_help_and_exit" if HELP_SUBCOMMANDS.include?(@subcmd) && SUBCOMMANDS.include?(@subargs[0])
-      display_help_and_exit if @subcmd.nil? || !SUBCOMMANDS.include?(@subcmd)
-      send "display_#{@subcmd}_help_and_exit" if @subargs.join("").match(HELP_SUBCOMMANDS.join('|')) && @subcmd != "info"
+      if HELP_SUBCOMMANDS.include?(@subcmd) && SUBCOMMANDS.include?(@subargs[0])
+        send "display_#{@subargs[0]}_help_and_exit"
+      elsif @subcmd.nil? || !SUBCOMMANDS.include?(@subcmd)
+        display_help_and_exit
+      elsif @subargs.join("").match(HELP_SUBCOMMANDS.join('|')) && @subcmd != "info"
+        send "display_#{@subcmd}_help_and_exit"
+      end
 
       if !@api_key
         begin
-          @api_key = File.read @app_config_path
-          # Remove any trailing whitespace causing HTTP requests to fail
-          @api_key = @api_key.strip
+          file = File.read @app_config_path
+          data = JSON.load file
+
+          if data
+            @api_key = data["API_KEY"].strip # Remove any trailing whitespace causing HTTP requests to fail
+            @sitename = data["SITENAME"] # Store the sitename to be able to reference it later
+            @last_pull = data["LAST_PULL"] # Store the last time a pull was performed so that we only fetch from updated files
+          end
         rescue Errno::ENOENT
           @api_key = nil
         end
@@ -68,8 +80,14 @@ module Neocities
 
         resp = @client.key
         if resp[:api_key]
+          conf = {
+            "API_KEY": resp[:api_key],
+            "SITENAME": @sitename,
+          }
+
           FileUtils.mkdir_p Pathname(@app_config_path).dirname
-          File.write @app_config_path, resp[:api_key]
+          File.write @app_config_path, conf.to_json
+
           puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
         else
           display_response resp
@@ -94,13 +112,13 @@ module Neocities
 
     def logout
       confirmed = false
-      loop {
+      loop do
         case @subargs[0]
         when '-y' then @subargs.shift; confirmed = true
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); break
         else break
         end
-      }
+      end
       if confirmed
         FileUtils.rm @app_config_path
         puts @pastel.bold("Your api key has been removed.")
@@ -119,7 +137,7 @@ module Neocities
 
       out = []
 
-      resp[:info].each do |k,v|
+      resp[:info].each do |k, v|
         v = Time.parse(v).localtime if v && (k == :created_at || k == :last_updated)
         out.push [@pastel.bold(k), v]
       end
@@ -171,7 +189,7 @@ module Neocities
       @excluded_files = []
       @dry_run = false
       @prune = false
-      loop {
+      loop do
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
@@ -180,7 +198,7 @@ module Neocities
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
-      }
+      end
 
       if @dry_run
         puts @pastel.green.bold("Doing a dry run, not actually pushing anything")
@@ -243,13 +261,11 @@ module Neocities
           end
         end
 
-        paths.select! {|p| !@excluded_files.include?(p)}
+        paths.select! { |p| !@excluded_files.include?(p) }
 
-        paths.select! {|p|
-          !@excluded_files.include?(Pathname.new(p).dirname.to_s)
-        }
+        paths.select! { |p| !@excluded_files.include?(Pathname.new(p).dirname.to_s) }
 
-        paths.collect! {|path| Pathname path}
+        paths.collect! { |path| Pathname path }
 
         paths.each do |path|
           next if path.directory?
@@ -272,13 +288,13 @@ module Neocities
       display_upload_help_and_exit if @subargs.empty?
       @dir = ''
 
-      loop {
+      loop do
         case @subargs[0]
         when '-d' then @subargs.shift; @dir = @subargs.shift
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_upload_help_and_exit
         else break
         end
-      }
+      end
 
       @subargs.each do |path|
         path = Pathname path
@@ -298,6 +314,35 @@ module Neocities
         puts @pastel.bold("Uploading #{path} to #{remote_path} ...")
         resp = @client.upload path, remote_path
         display_response resp
+      end
+    end
+
+    def pull
+      begin
+        quiet = !(['--log', '-l'].include? @subargs[0])
+
+        file = File.read @app_config_path
+        data = JSON.load file
+
+        last_pull_time = data["LAST_PULL"] ? data["LAST_PULL"]["time"] : nil
+        last_pull_loc = data["LAST_PULL"] ? data["LAST_PULL"]["loc"] : nil
+
+        Whirly.start spinner: ["😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"], status: "Retrieving files for #{@pastel.bold @sitename}" if quiet
+        resp = @client.pull @sitename, last_pull_time, last_pull_loc, quiet
+
+        # write last pull data to file (not necessarily the best way to do this, but better than cloning every time)
+        data["LAST_PULL"] = {
+          "time": Time.now,
+          "loc": Dir.pwd
+        }
+
+        File.write @app_config_path, data.to_json
+      rescue StandardError => ex
+        Whirly.stop if quiet
+        puts @pastel.red.bold "\nA fatal error occurred :-("
+        puts @pastel.red ex
+      ensure
+        exit
       end
     end
 
@@ -357,6 +402,16 @@ HERE
   #{@pastel.green '$ neocities upload img.jpg img2.jpg'}    Upload images to the root of your site
 
   #{@pastel.green '$ neocities upload -d images img.jpg'}   Upload img.jpg to the 'images' directory on your site
+
+HERE
+      exit
+    end
+
+    def display_pull_help_and_exit
+      display_banner
+
+      puts <<HERE
+  #{@pastel.magenta.bold 'pull'} - Get the most recent version of files from your site
 
 HERE
       exit
@@ -433,6 +488,7 @@ HERE
     info        Information and stats for your site
     logout      Remove the site api key from the config
     version     Unceremoniously display version and self destruct
+    pull        Get the most recent version of files from your site
     pizza       Order a free pizza
 
 HERE
