@@ -45,17 +45,19 @@ module Neocities
         exit
       end
 
-      display_help_and_exit if @subcmd.nil? || @argv.include?(HELP_SUBCOMMANDS) || !SUBCOMMANDS.include?(@subcmd)
-
-      if @subcmd != "pull"
-        send "display_#{@subcmd}_help_and_exit" if @subargs.empty?
+      if HELP_SUBCOMMANDS.include?(@subcmd) && SUBCOMMANDS.include?(@subargs[0])
+        send "display_#{@subargs[0]}_help_and_exit"
+      elsif @subcmd.nil? || !SUBCOMMANDS.include?(@subcmd)
+        display_help_and_exit
+      elsif @subargs.join("").match(HELP_SUBCOMMANDS.join('|')) && @subcmd != "info"
+        send "display_#{@subcmd}_help_and_exit"
       end
 
       if !@api_key
         begin
           file = File.read @app_config_path
           data = JSON.load file
-          
+
           if data
             @api_key = data["API_KEY"].strip # Remove any trailing whitespace causing HTTP requests to fail
             @sitename = data["SITENAME"] # Store the sitename to be able to reference it later
@@ -64,7 +66,7 @@ module Neocities
         rescue Errno::ENOENT
           @api_key = nil
         end
-      end 
+      end
 
       if @api_key.nil?
         puts "Please login to get your API key:"
@@ -99,6 +101,7 @@ module Neocities
     end
 
     def delete
+      display_delete_help_and_exit if @subargs.empty?
       @subargs.each do |file|
         puts @pastel.bold("Deleting #{file} ...")
         resp = @client.delete file
@@ -109,16 +112,18 @@ module Neocities
 
     def logout
       confirmed = false
-      loop {
+      loop do
         case @subargs[0]
         when '-y' then @subargs.shift; confirmed = true
-        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_logout_help_and_exit
+        when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); break
         else break
         end
-      }
+      end
       if confirmed
         FileUtils.rm @app_config_path
         puts @pastel.bold("Your api key has been removed.")
+      else
+        display_logout_help_and_exit
       end
     end
 
@@ -132,7 +137,7 @@ module Neocities
 
       out = []
 
-      resp[:info].each do |k,v|
+      resp[:info].each do |k, v|
         v = Time.parse(v).localtime if v && (k == :created_at || k == :last_updated)
         out.push [@pastel.bold(k), v]
       end
@@ -142,6 +147,7 @@ module Neocities
     end
 
     def list
+      display_list_help_and_exit if @subargs.empty?
       if @subargs.delete('-d') == '-d'
         @detail = true
       end
@@ -178,11 +184,12 @@ module Neocities
     end
 
     def push
+      display_push_help_and_exit if @subargs.empty?
       @no_gitignore = false
       @excluded_files = []
       @dry_run = false
       @prune = false
-      loop {
+      loop do
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
@@ -191,7 +198,7 @@ module Neocities
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
-      }
+      end
 
       if @dry_run
         puts @pastel.green.bold("Doing a dry run, not actually pushing anything")
@@ -254,13 +261,11 @@ module Neocities
           end
         end
 
-        paths.select! {|p| !@excluded_files.include?(p)}
+        paths.select! { |p| !@excluded_files.include?(p) }
 
-        paths.select! {|p|
-          !@excluded_files.include?(Pathname.new(p).dirname.to_s)
-        }
+        paths.select! { |p| !@excluded_files.include?(Pathname.new(p).dirname.to_s) }
 
-        paths.collect! {|path| Pathname path}
+        paths.collect! { |path| Pathname path }
 
         paths.each do |path|
           next if path.directory?
@@ -283,13 +288,13 @@ module Neocities
       display_upload_help_and_exit if @subargs.empty?
       @dir = ''
 
-      loop {
+      loop do
         case @subargs[0]
         when '-d' then @subargs.shift; @dir = @subargs.shift
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_upload_help_and_exit
         else break
         end
-      }
+      end
 
       @subargs.each do |path|
         path = Pathname path
@@ -314,16 +319,7 @@ module Neocities
 
     def pull
       begin
-        # default options
-        quiet = true
-
-        loop {
-          case @subargs[0]
-          when '--logs', '-l' then @subargs.shift; quiet = false
-          when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_pull_help_and_exit
-          else break
-          end
-        }
+        quiet = !(['--log', '-l'].include? @subargs[0])
 
         file = File.read @app_config_path
         data = JSON.load file
@@ -332,7 +328,6 @@ module Neocities
         last_pull_loc = data["LAST_PULL"] ? data["LAST_PULL"]["loc"] : nil
 
         Whirly.start spinner: ["😺", "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾"], status: "Retrieving files for #{@pastel.bold @sitename}" if quiet
-
         resp = @client.pull @sitename, last_pull_time, last_pull_loc, quiet
 
         # write last pull data to file (not necessarily the best way to do this, but better than cloning every time)
@@ -349,6 +344,10 @@ module Neocities
       ensure
         exit
       end
+    end
+
+    def pizza
+      display_pizza_help_and_exit
     end
 
     def display_pizza_help_and_exit
@@ -412,18 +411,11 @@ HERE
       display_banner
 
       puts <<HERE
-  #{@pastel.green.bold 'pull'} - Get the most recent version of files from your site
-
-  #{@pastel.dim 'Examples:'}
-
-  #{@pastel.green '$ neocities pull'}        Download/update files in the current folder
-
-  #{@pastel.green '$ neocities pull --logs'} Download/update files in the current folder, displaying information about each download
+  #{@pastel.magenta.bold 'pull'} - Get the most recent version of files from your site
 
 HERE
       exit
     end
-
 
     def display_push_help_and_exit
       display_banner
@@ -440,7 +432,7 @@ HERE
   #{@pastel.green '$ neocities push --no-gitignore .'}                  Don't use .gitignore to exclude files
 
   #{@pastel.green '$ neocities push --dry-run .'}                       Just show what would be uploaded
-      
+
   #{@pastel.green '$ neocities push --prune .'}                         Delete site files not in dir (be careful!)
 
 HERE
