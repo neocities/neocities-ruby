@@ -189,12 +189,14 @@ module Neocities
       @excluded_files = []
       @dry_run = false
       @prune = false
+      @preview_file = nil
       loop do
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
         when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
         when '--dry-run' then @subargs.shift; @dry_run = true
         when '--prune' then @subargs.shift; @prune = true
+        when '--preview-file' then @subargs.shift; @preview_file = @subargs.shift
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
         else break
         end
@@ -212,7 +214,7 @@ module Neocities
       end
 
       if !root_path.directory?
-        display_response result: 'error', message: 'provided path is not a directory'
+        display_response result: 'error', message: "provided path #{root_path} is not a directory"
         display_push_help_and_exit
       end
 
@@ -266,6 +268,22 @@ module Neocities
         paths.select! { |p| !@excluded_files.include?(Pathname.new(p).dirname.to_s) }
 
         paths.collect! { |path| Pathname path }
+
+        if @preview_file
+          preview_file_path = Pathname @preview_file
+          if !preview_file_path.file?
+            display_response result: 'error', message: "preview file #{@preview_file} does not exist or is not a regular file"
+            display_push_help_and_exit
+          elsif !paths.any? { |path| Pathname(path).cleanpath == preview_file_path.cleanpath }
+            display_response result: 'error', message: "preview file #{@preview_file} is ignored"
+            display_push_help_and_exit
+          end
+
+          # The file used for preview is the first file that is uploaded in a SiteChange
+          # Ensure the preview file is uploaded first to make sure it is the preview
+          paths.reject! { |p| p.cleanpath == preview_file_path.cleanpath }
+          paths.unshift(preview_file_path)
+        end
 
         paths.each do |path|
           next if path.directory?
