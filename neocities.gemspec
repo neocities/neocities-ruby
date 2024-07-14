@@ -21,5 +21,6 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'tty-prompt',          '~> 0.12', '= 0.12.0'
   spec.add_dependency 'pastel',              '~> 0.7',  '= 0.7.2'
   spec.add_dependency 'httpclient-fixcerts', '~> 2.8',  '>= 2.8.5'
-  spec.add_dependency 'rake',                '~> 12.3',  '>= 12.3.1'
+  spec.add_dependency 'rake',                '~> 12.3', '>= 12.3.1'
+  spec.add_dependency 'whirly',              '~> 0.3',  '>= 0.3.0'
 end
