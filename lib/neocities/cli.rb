@@ -453,7 +453,7 @@ HERE
 
   #{@pastel.green '$ neocities push --prune .'}                         Delete site files not in dir (be careful!)
 
-  #{@pastel.green '$ neocities push --preview-file index.html'}         Use index.html as the main preview image in activity feed entries
+  #{@pastel.green '$ neocities push --preview-file index.html .'}       Use index.html as the main preview image in activity feed entries
 
 HERE
       exit
