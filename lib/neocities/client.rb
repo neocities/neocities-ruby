@@ -65,6 +65,7 @@ module Neocities
       end
       
       # fetch each file
+      uri_parser = URI::Parser.new
       resp[:files].each do |file|
         if !file[:is_directory]
           print @pastel.bold("Loading #{file[:path]} ... ") if !quiet
@@ -80,7 +81,7 @@ module Neocities
             next
           end
           
-          pathtotry = domain + file[:path]
+          pathtotry = uri_parser.escape(domain + file[:path])
           fileconts = @http.get pathtotry
           
           # follow redirects
