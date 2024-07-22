@@ -200,8 +200,9 @@ module Neocities
         end
       end
 
-      if @dry_run
-        puts @pastel.green.bold("Doing a dry run, not actually pushing anything")
+      if @subargs[0].nil?
+        display_response result: 'error', message: "no local path provided"
+        display_push_help_and_exit
       end
 
       root_path = Pathname @subargs[0]
@@ -214,6 +215,10 @@ module Neocities
       if !root_path.directory?
         display_response result: 'error', message: 'provided path is not a directory'
         display_push_help_and_exit
+      end
+
+      if @dry_run
+        puts @pastel.green.bold("Doing a dry run, not actually pushing anything")
       end
 
       if @prune
