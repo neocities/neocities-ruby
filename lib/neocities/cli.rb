@@ -324,7 +324,7 @@ module Neocities
 
     def pull
       begin
-        quiet = !(['--log', '-l'].include? @subargs[0])
+        quiet = (['--quiet', '-q'].include? @subargs[0])
 
         file = File.read @app_config_path
         data = JSON.load file
@@ -356,7 +356,84 @@ module Neocities
     end
 
     def display_pizza_help_and_exit
-      puts "Sorry, we're fresh out of dough today. Try again tomorrow."
+      excuses = [
+        "Sorry, we're fresh out of pineapple today.",
+        "All the toppings just went rogue and are currently answering to no god.",
+        "Our bicycle delivery guy is out today for ska band practice.",
+        "Doughpocalypse now. Pizza's off until further notice.",
+        "Mamma mia! We're outta the cheesa.",
+        "The sauce of our youth ran dry. Pizza is off the menu for now.",
+        "There was this pizza place in Portland called Lonesomes that taped burned CDs of local bands to the pizza box. It was pretty dope.",
+        "No dough, no go, sorry joe.",
+        "I'll be right with you after I figure out how to center a div in CSS.",
+        "The pizza gods demand rest. Are the hunger pangs interrupting your game?",
+        "Our pizza chef currently has the high score on the Road Kings pinball machine, you dare disturb him?",
+        "Today's special: disappointment. Pizza unavailable.",
+        "Our last pizza became a perpetual motion machine, left the atmosphere and is flying through the heavens.",
+        "Ran out of oregano and optimism. See you next time.",
+        "WAR AND PEACE, BY LEO TOLSTOY, BOOK ONE: 1805, CHAPTER I  “Well, Prince, so Genoa and Lucca are now just family estates of the Buonapartes. But I warn you, if you don’t tell me that this means war, if you still try to defend the infamies and horrors perpetrated by that Antichrist—I really believe he is Antichrist—I will have nothing more to do with you and you are no longer my friend, no longer my ‘faithful slave,’ as you call yourself! But how do you do? I see I have frightened you—sit down and tell me all the news.”
+
+It was in July, 1805, and the speaker was the well-known Anna Pávlovna Schérer, maid of honor and favorite of the Empress Márya Fëdorovna. With these words she greeted Prince Vasíli Kurágin, a man of high rank and importance, who was the first to arrive at her reception. Anna Pávlovna had had a cough for some days. She was, as she said, suffering from la grippe; grippe being then a new word in St. Petersburg, used only by the elite.
+
+All her invitations without exception, written in French, and delivered by a scarlet-liveried footman that morning, ran as follows:
+
+“If you have nothing better to do, Count (or Prince), and if the prospect of spending an evening with a poor invalid is not too terrible, I shall be very charmed to see you tonight between 7 and 10—Annette Schérer.”
+
+“Heavens! what a virulent attack!” replied the prince, not in the least disconcerted by this reception. He had just entered, wearing an embroidered court uniform, knee breeches, and shoes, and had stars on his breast and a serene expression on his flat face. He spoke in that refined French in which our grandfathers not only spoke but thought, and with the gentle, patronizing intonation natural to a man of importance who had grown old in society and at court. He went up to Anna Pávlovna, kissed her hand, presenting to her his bald, scented, and shining head, and complacently seated himself on the sofa.
+
+“First of all, dear friend, tell me how you are. Set your friend’s mind at rest,” said he without altering his tone, beneath the politeness and affected sympathy of which indifference and even irony could be discerned.
+
+“Can one be well while suffering morally? Can one be calm in times like these if one has any feeling?” said Anna Pávlovna. “You are staying the whole evening, I hope?”
+
+“And the fete at the English ambassador’s? Today is Wednesday. I must put in an appearance there,” said the prince. “My daughter is coming for me to take me there.”
+
+“I thought today’s fete had been canceled. I confess all these festivities and fireworks are becoming wearisome.”
+
+“If they had known that you wished it, the entertainment would have been put off,” said the prince, who, like a wound-up clock, by force of habit said things he did not even wish to be believed.
+
+“Don’t tease! Well, and what has been decided about Novosíltsev’s dispatch? You know everything.”
+
+“What can one say about it?” replied the prince in a cold, listless tone. “What has been decided? They have decided that Buonaparte has burnt his boats, and I believe that we are ready to burn ours.”
+
+Prince Vasíli always spoke languidly, like an actor repeating a stale part. Anna Pávlovna Schérer on the contrary, despite her forty years, overflowed with animation and impulsiveness. To be an enthusiast had become her social vocation and, sometimes even when she did not feel like it, she became enthusiastic in order not to disappoint the expectations of those who knew her. The subdued smile which, though it did not suit her faded features, always played round her lips expressed, as in a spoiled child, a continual consciousness of her charming defect, which she neither wished, nor could, nor considered it necessary, to correct.
+
+In the midst of a conversation on political matters Anna Pávlovna burst out:
+
+“Oh, don’t speak to me of Austria. Perhaps I don’t understand things, but Austria never has wished, and does not wish, for war. She is betraying us! Russia alone must save Europe. Our gracious sovereign recognizes his high vocation and will be true to it. That is the one thing I have faith in! Our good and wonderful sovereign has to perform the noblest role on earth, and he is so virtuous and noble that God will not forsake him. He will fulfill his vocation and crush the hydra of revolution, which has become more terrible than ever in the person of this murderer and villain! We alone must avenge the blood of the just one.... Whom, I ask you, can we rely on?... England with her commercial spirit will not and cannot understand the Emperor Alexander’s loftiness of soul. She has refused to evacuate Malta. She wanted to find, and still seeks, some secret motive in our actions. What answer did Novosíltsev get? None. The English have not understood and cannot understand the self-abnegation of our Emperor who wants nothing for himself, but only desires the good of mankind. And what have they promised? Nothing! And what little they have promised they will not perform! Prussia has always declared that Buonaparte is invincible, and that all Europe is powerless before him.... And I don’t believe a word that Hardenburg says, or Haugwitz either. This famous Prussian neutrality is just a trap. I have faith only in God and the lofty destiny of our adored monarch. He will save Europe!”
+
+She suddenly paused, smiling at her own impetuosity.
+
+“I think,” said the prince with a smile, “that if you had been sent instead of our dear Wintzingerode you would have captured the King of Prussia’s consent by assault. You are so eloquent. Will you give me a cup of tea?”
+
+“In a moment. À propos,” she added, becoming calm again, “I am expecting two very interesting men tonight, le Vicomte de Mortemart, who is connected with the Montmorencys through the Rohans, one of the best French families. He is one of the genuine émigrés, the good ones. And also the Abbé Morio. Do you know that profound thinker? He has been received by the Emperor. Had you heard?”
+
+“I shall be delighted to meet them,” said the prince. “But tell me,” he added with studied carelessness as if it had only just occurred to him, though the question he was about to ask was the chief motive of his visit, “is it true that the Dowager Empress wants Baron Funke to be appointed first secretary at Vienna? The baron by all accounts is a poor creature.”
+
+Prince Vasíli wished to obtain this post for his son, but others were trying through the Dowager Empress Márya Fëdorovna to secure it for the baron.
+
+Anna Pávlovna almost closed her eyes to indicate that neither she nor anyone else had a right to criticize what the Empress desired or was pleased with.
+
+“Baron Funke has been recommended to the Dowager Empress by her sister,” was all she said, in a dry and mournful tone.
+
+As she named the Empress, Anna Pávlovna’s face suddenly assumed an expression of profound and sincere devotion and respect mingled with sadness, and this occurred every time she mentioned her illustrious patroness. She added that Her Majesty had deigned to show Baron Funke beaucoup d’estime, and again her face clouded over with sadness.
+
+The prince was silent and looked indifferent. But, with the womanly and courtierlike quickness and tact habitual to her, Anna Pávlovna wished both to rebuke him (for daring to speak as he had done of a man recommended to the Empress) and at the same time to console him, so she said:
+
+“Now about your family. Do you know that since your daughter came out everyone has been enraptured by her? They say she is amazingly beautiful.”
+
+The prince bowed to signify his respect and gratitude.
+
+“I often think,” she continued after a short pause, drawing nearer to the prince and smiling amiably at him as if to show that political and social topics were ended and the time had come for intimate conversation—“I often think how unfairly sometimes the joys of life are distributed. Why has fate given you two such splendid children? I don’t speak of Anatole, your youngest. I don’t like him,” she added in a tone admitting of no rejoinder and raising her eyebrows. “Two such charming children. And really you appreciate them less than anyone, and so you don’t deserve to have them.”
+
+And she smiled her ecstatic smile.
+
+“I can’t help it,” said the prince. “Lavater would have said I lack the bump of paternity.”
+
+“Don’t joke; I mean to have a serious talk with you. Do you know I am dissatisfied with your younger son? Between ourselves” (and her face assumed its melancholy expression), “he was mentioned at Her Majesty’s and you were pitied....”
+
+The prince answered nothing, but she looked at him significantly, awaiting a reply. He frowned."
+      ]
+      puts @pastel.bright_red(excuses.sample)
       exit
     end
 
@@ -416,7 +493,7 @@ HERE
       display_banner
 
       puts <<HERE
-  #{@pastel.magenta.bold 'pull'} - Get the most recent version of files from your site
+  #{@pastel.magenta.bold 'pull'} - Get the most recent version of files from your site, does not download if files haven't changed
 
 HERE
       exit

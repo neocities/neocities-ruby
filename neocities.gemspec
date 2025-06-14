@@ -16,11 +16,12 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(tests)/})
   spec.require_paths = ["lib"]
   spec.extensions    = ['ext/mkrf_conf.rb']
+  spec.required_ruby_version = '>3.0.0'
 
-  spec.add_dependency 'tty-table',           '~> 0.10', '= 0.10.0'
-  spec.add_dependency 'tty-prompt',          '~> 0.12', '= 0.12.0'
-  spec.add_dependency 'pastel',              '~> 0.7',  '= 0.7.2'
-  spec.add_dependency 'httpclient-fixcerts', '~> 2.8',  '>= 2.8.5'
-  spec.add_dependency 'rake',                '~> 12.3', '>= 12.3.1'
+  spec.add_dependency 'tty-table',           '~> 0.12', '= 0.12.0'
+  spec.add_dependency 'tty-prompt',          '~> 0.23', '= 0.23.1'
+  spec.add_dependency 'pastel',              '~> 0.8',  '= 0.8.0'
+  spec.add_dependency 'http',                '~> 5.3',  '>= 5.3.1'
+  spec.add_dependency 'rake',                '~> 13',   '>= 13.3.0'
   spec.add_dependency 'whirly',              '~> 0.3',  '>= 0.3.0'
 end

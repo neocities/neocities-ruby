@@ -7,10 +7,9 @@ require 'json'
 require 'pathname'
 require 'uri'
 require 'digest'
-require 'httpclient'
+require 'http'
 require 'pastel'
 require 'date'
-
 require 'whirly'
 
 module Neocities
@@ -19,7 +18,6 @@ module Neocities
 
     def initialize(opts={})
       @uri = URI.parse API_URI
-      @http = HTTPClient.new force_basic_auth: true
       @opts = opts
       @pastel = Pastel.new eachline: "\n"
 
@@ -28,9 +26,9 @@ module Neocities
       end
 
       if opts[:api_key]
-        @http.default_header = {'Authorization' => "Bearer #{opts[:api_key]}"}
+        @http = HTTP.auth("Bearer #{opts[:api_key]}")
       else
-        @http.set_auth API_URI, opts[:sitename], opts[:password]
+        @http = HTTP.basic_auth user: opts[:sitename], pass: opts[:password]
       end
     end
 
@@ -68,7 +66,7 @@ module Neocities
       uri_parser = URI::Parser.new
       resp[:files].each do |file|
         if !file[:is_directory]
-          print @pastel.bold("Loading #{file[:path]} ... ") if !quiet
+          print @pastel.bold("Pulling #{file[:path]} ... ") if !quiet
           
           if 
             last_pull_time && \
@@ -82,18 +80,9 @@ module Neocities
           end
           
           pathtotry = uri_parser.escape(domain + file[:path])
-          fileconts = @http.get pathtotry
-          
-          # follow redirects
-          while fileconts.status == 301
-            new_path = fileconts.header['location'][0]
-            print "\n#{@pastel.red "Fetch from #{pathtotry} failed."}\nTrying #{new_path} instead..." if !quiet
+          fileconts = @http.follow.get pathtotry
 
-            pathtotry = new_path
-            fileconts = @http.get pathtotry
-          end
-
-          if fileconts.ok?
+          if fileconts.status == 200
             print "#{@pastel.green.bold 'SUCCESS'}\n" if !quiet
             success_loaded += 1
 
@@ -115,7 +104,7 @@ module Neocities
       Whirly.stop if quiet
 
       # display stats
-      puts @pastel.green "\nSuccessfully fetched #{success_loaded} files in #{total_time} seconds"
+      puts @pastel.green "\nSuccessfully fetched #{success_loaded} files in #{total_time.round(2)} seconds"
     end
 
     def key
@@ -135,7 +124,7 @@ module Neocities
 
       rpath = (remote_path || path.basename)
 
-      res = upload_hash rpath, Digest::SHA1.file(path.to_s).hexdigest
+      res = upload_hash rpath.to_s, Digest::SHA1.file(path.to_s).hexdigest
 
       if res[:files] && res[:files][remote_path.to_s.to_sym] == true
         return {result: 'error', error_type: 'file_exists', message: 'file already exists and matches local file, not uploading'}
@@ -144,7 +133,7 @@ module Neocities
           return {result: 'success'}
         else
           File.open(path.to_s) do |file|
-            post 'upload', rpath => file
+            post 'upload', rpath => HTTP::FormData::File.new(file)
           end
         end
       end
@@ -170,13 +159,12 @@ module Neocities
       uri = @uri+path
       uri.query = URI.encode_www_form params
       resp = @http.get uri
-      
       JSON.parse resp.body, symbolize_names: true
     end
 
     def post(path, args={})
       uri = @uri+path
-      resp = @http.post uri, args
+      resp = @http.post uri, form: args
       JSON.parse resp.body, symbolize_names: true
     end
   end
