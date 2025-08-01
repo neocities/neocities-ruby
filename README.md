@@ -16,7 +16,7 @@ If you're using OSX (or already have ruby installed):
 
 ### Windows
 
-Install ruby with [RubyInstaller](https://rubyinstaller.org/). Then you can install the gem with the above command.
+Install ruby with [RubyInstaller](https://rubyinstaller.org/). Then you can install the gem with the `gem install neocities` command.
 
 ### Running
 
