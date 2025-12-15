@@ -24,4 +24,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'http',                '~> 5.3',  '>= 5.3.1'
   spec.add_dependency 'rake',                '~> 13',   '>= 13.3.0'
   spec.add_dependency 'whirly',              '~> 0.3',  '>= 0.3.0'
+  spec.add_dependency 'openssl',             '~> 3.3',  '>= 3.3.1'
 end
