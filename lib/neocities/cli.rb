@@ -192,7 +192,16 @@ module Neocities
       loop do
         case @subargs[0]
         when '--no-gitignore' then @subargs.shift; @no_gitignore = true
-        when '-e' then @subargs.shift; @excluded_files.push(@subargs.shift)
+        when '-e' then
+          @subargs.shift
+          filepath = Pathname.new(@subargs.shift).cleanpath.to_s
+
+          if File.file?(filepath)
+            @excluded_files.push(filepath)
+          elsif File.directory?(filepath)
+            folder_files = (Dir.glob(File.join(filepath, '**', '*'), File::FNM_DOTMATCH)).push(filepath)
+            @excluded_files += folder_files
+          end
         when '--dry-run' then @subargs.shift; @dry_run = true
         when '--prune' then @subargs.shift; @prune = true
         when /^-/ then puts(@pastel.red.bold("Unknown option: #{@subargs[0].inspect}")); display_push_help_and_exit
@@ -266,12 +275,8 @@ module Neocities
           end
         end
 
-        paths.select! { |p| !@excluded_files.include?(p) }
-
-        paths.select! { |p| !@excluded_files.include?(Pathname.new(p).dirname.to_s) }
-
+        paths -= @excluded_files
         paths.collect! { |path| Pathname path }
-
         paths.each do |path|
           next if path.directory?
           print @pastel.bold("Uploading #{path} ... ")
