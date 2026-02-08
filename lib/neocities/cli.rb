@@ -491,6 +491,10 @@ HERE
   #{@pastel.green '$ neocities upload img.jpg img2.jpg'}    Upload images to the root of your site
 
   #{@pastel.green '$ neocities upload -d images img.jpg'}   Upload img.jpg to the 'images' directory on your site
+  
+  #{@pastel.green '$ neocities upload cats/'}               Upload 'cats' folder on your site
+  
+  #{@pastel.green '$ neocities upload -d images cats/'}     Upload 'cats' folder to the 'images' directory on your site (it will be cats/images/<your files>)
 
 HERE
       exit
@@ -571,7 +575,7 @@ HERE
       puts <<HERE
   #{@pastel.dim 'Subcommands:'}
     push        Recursively upload a local directory to your site
-    upload      Upload individual files to your Neocities site
+    upload      Upload specific files/directories to your Neocities site
     delete      Delete files from your Neocities site
     list        List files from your Neocities site
     info        Information and stats for your site
