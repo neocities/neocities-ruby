@@ -309,16 +309,23 @@ module Neocities
           next
         end
 
-        if path.directory?
-          puts "#{path} is a directory, skipping (see the push command)"
-          next
+        if path.file?
+          files_to_upload = [path]
+          remote_paths = [['/', @dir, path.basename.to_s].join('/').gsub(%r{/+}, '/')]
+        else # directory
+          files_to_upload = path.glob("**/*").select(&:file?)
+          remote_paths = files_to_upload.map { |file| ['/', @dir, file.to_s].join('/').gsub(%r{/+}, '/') }
         end
+        
+        files_to_upload.count.times do |file_number|
+          file = files_to_upload[file_number]
+          remote_path = remote_paths[file_number]
 
-        remote_path = ['/', @dir, path.basename.to_s].join('/').gsub %r{/+}, '/'
+          puts @pastel.bold("Uploading #{file} to #{remote_path} ...")
 
-        puts @pastel.bold("Uploading #{path} to #{remote_path} ...")
-        resp = @client.upload path, remote_path
-        display_response resp
+          resp = @client.upload(file, remote_path)
+          display_response resp
+        end
       end
     end
 
