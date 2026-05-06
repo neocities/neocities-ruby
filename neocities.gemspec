@@ -22,6 +22,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'tty-prompt',          '~> 0.23', '= 0.23.1'
   spec.add_dependency 'pastel',              '~> 0.8',  '= 0.8.0'
   spec.add_dependency 'http',                '~> 5.3',  '>= 5.3.1'
+  spec.add_dependency 'http-cookie',         '~> 1.0',  '< 1.1.1'
   spec.add_dependency 'rake',                '~> 13',   '>= 13.3.0'
   spec.add_dependency 'whirly',              '~> 0.3',  '>= 0.3.0'
   spec.add_dependency 'openssl',             '~> 3.3',  '>= 3.3.1'
