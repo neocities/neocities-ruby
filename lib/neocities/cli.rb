@@ -14,6 +14,7 @@ module Neocities
     HELP_SUBCOMMANDS = ['-h', '--help', 'help']
     PENELOPE_MOUTHS = %w{^ o ~ - v U}
     PENELOPE_EYES = %w{o ~ O}
+    ALWAYS_EXCLUDED_PUSH_DIRECTORIES = %w{.git}.freeze
 
     def initialize(argv)
       @argv = argv.dup
@@ -245,6 +246,7 @@ module Neocities
 
       Dir.chdir(root_path) do
         paths = Dir.glob(File.join('**', '*'), File::FNM_DOTMATCH)
+        paths.reject! { |path| always_excluded_push_path?(path) }
 
         if @no_gitignore == false
           begin
@@ -575,6 +577,12 @@ HERE
 
 HERE
       exit
+    end
+
+    def always_excluded_push_path?(path)
+      Pathname.new(path).each_filename.any? do |filename|
+        ALWAYS_EXCLUDED_PUSH_DIRECTORIES.include?(filename)
+      end
     end
 
     def self.app_config_path(name)
