@@ -41,6 +41,8 @@ module Neocities
     end
 
     def run
+      display_sign_in_status if @argv.empty?
+
       if @argv[0] == 'version'
         puts Neocities::VERSION
         exit
@@ -54,13 +56,15 @@ module Neocities
         send "display_#{@subcmd}_help_and_exit"
       end
 
+      return logout if @subcmd == 'logout'
+
       if !@api_key
         begin
           file = File.read @app_config_path
           data = JSON.load file
 
           if data
-            @api_key = data["API_KEY"].strip # Remove any trailing whitespace causing HTTP requests to fail
+            @api_key = data["API_KEY"]&.strip # Remove any trailing whitespace causing HTTP requests to fail
             @sitename = data["SITENAME"] # Store the sitename to be able to reference it later
             @last_pull = data["LAST_PULL"] # Store the last time a pull was performed so that we only fetch from updated files
           end
@@ -69,36 +73,43 @@ module Neocities
         end
       end
 
-      if @api_key.nil?
-        puts "Please login to get your API key:"
+      prompted_for_api_key = false
+      if @api_key.nil? || @api_key.empty?
+        puts 'Please enter your Neocities API key.'
+        puts 'Create or copy one from https://neocities.org/settings'
+        @api_key = @prompt.mask('API key:').to_s.strip
+        prompted_for_api_key = true
+      end
 
-        if !@sitename && !@password
-          @sitename = @prompt.ask('sitename:', default: ENV['NEOCITIES_SITENAME'])
-          @password = @prompt.mask('password:', default: ENV['NEOCITIES_PASSWORD'])
-        end
+      @client = build_client @api_key
 
-        @client = Neocities::Client.new sitename: @sitename, password: @password
-
-        resp = @client.key
-        if resp[:api_key]
-          conf = {
-            "API_KEY": resp[:api_key],
-            "SITENAME": @sitename,
-          }
-
-          FileUtils.mkdir_p Pathname(@app_config_path).dirname
-          File.write @app_config_path, conf.to_json
-
-          puts "The api key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
-        else
+      if prompted_for_api_key || @sitename.nil?
+        resp = @client.info
+        if resp[:result] == 'error'
           display_response resp
           exit
         end
-      else
-        @client = Neocities::Client.new api_key: @api_key
+
+        @sitename = resp[:info][:sitename]
+      end
+
+      if prompted_for_api_key
+        conf = {
+          "API_KEY": @api_key,
+          "SITENAME": @sitename,
+        }
+
+        FileUtils.mkdir_p Pathname(@app_config_path).dirname
+        File.write @app_config_path, conf.to_json
+
+        puts "The API key for #{@pastel.bold @sitename} has been stored in #{@pastel.bold @app_config_path}."
       end
 
       send @subcmd
+    end
+
+    def build_client(api_key)
+      Neocities::Client.new api_key: api_key
     end
 
     def delete
@@ -121,8 +132,8 @@ module Neocities
         end
       end
       if confirmed
-        FileUtils.rm @app_config_path
-        puts @pastel.bold("Your api key has been removed.")
+        FileUtils.rm_f @app_config_path
+        puts @pastel.bold("Your API key has been removed.")
       else
         display_logout_help_and_exit
       end
@@ -561,6 +572,29 @@ HERE
 HERE
     end
 
+    def display_sign_in_status
+      config = {}
+      begin
+        config = JSON.parse File.read(@app_config_path)
+      rescue SystemCallError, JSON::ParserError
+        # Status should still be available without a readable config.
+      end
+      config = {} unless config.is_a?(Hash)
+      saved_key = config['API_KEY'].to_s.strip
+      environment_key = ENV['NEOCITIES_API_KEY']
+
+      status = if environment_key && environment_key != saved_key
+        environment_key.empty? ? 'Signed out' : 'Using NEOCITIES_API_KEY (username not loaded)'
+      elsif saved_key.empty?
+        'Signed out'
+      elsif config['SITENAME'].to_s.empty?
+        'API key saved (username not loaded)'
+      else
+        "Signed in as: #{config['SITENAME']}"
+      end
+      puts @pastel.cyan.bold(status)
+    end
+
     def display_help_and_exit
       display_banner
       puts <<HERE
@@ -574,6 +608,9 @@ HERE
     version     Unceremoniously display version and self destruct
     pull        Get the most recent version of files from your site
     pizza       Order a free pizza
+
+  The first command asks for an API key from your site settings.
+  Set NEOCITIES_API_KEY to use a key without saving it locally.
 
 HERE
       exit

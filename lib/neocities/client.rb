@@ -151,7 +151,9 @@ module Neocities
       post 'delete', 'filenames[]' => paths
     end
 
-    def info(sitename)
+    def info(sitename=nil)
+      return get 'info' if sitename.nil?
+
       get 'info', sitename: sitename
     end
 
