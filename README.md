@@ -13,6 +13,11 @@ If you're using OSX (or already have ruby installed):
 ### Ubuntu/Debian
 
     sudo apt-get install ruby
+    gem install neocities
+
+### RHEL/AlmaLinux/RockyLinux
+    sudo dnf install ruby
+    gem install neocities
 
 ### Windows
 
