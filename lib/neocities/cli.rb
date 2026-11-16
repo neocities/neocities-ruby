@@ -279,9 +279,10 @@ module Neocities
           end
         end
 
-        paths.select! { |p| !@excluded_files.include?(p) }
+        @excluded_files.collect! { |file| File.directory?(file) ? Dir.glob("#{file}/**/*") : file }
+        @excluded_files.flatten!
 
-        paths.select! { |p| !@excluded_files.include?(Pathname.new(p).dirname.to_s) }
+        paths.select! { |p| !@excluded_files.include?(p) }
 
         paths.collect! { |path| Pathname path }
 
